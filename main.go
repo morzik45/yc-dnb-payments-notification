@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
@@ -160,8 +161,9 @@ func (u *Update) Processes(db DB, msg Notification) error {
 }
 
 func Handler(_ context.Context, request RequestBody) (*Response, error) {
+	decoder := json.NewDecoder(bytes.NewReader([]byte(request.Body)))
 	update := new(Update)
-	err := json.Unmarshal([]byte(request.Body), &update)
+	err := decoder.Decode(&update)
 	if err != nil {
 		SaveError("errors", fmt.Sprintf("func: Handler_json.Unmarshal\nerror: %s\nUpdate: %s", err, request.Body))
 	} else if update.Validate(os.Getenv("YM_SECRET")) {
