@@ -45,8 +45,8 @@ func NewMongoDB() MongoDB {
 
 	mdb := MongoDB{}
 
-	mdb.Payments = client.Database("deepnudebot").Collection("payments")
-	mdb.Users = client.Database("deepnudebot").Collection("users")
+	mdb.Payments = client.Database(os.Getenv("DB_NAME")).Collection("payments")
+	mdb.Users = client.Database(os.Getenv("DB_NAME")).Collection("users")
 
 	return mdb
 }
@@ -67,14 +67,10 @@ func (m *MongoDB) SaveInDB(u *Update) error {
 	return err
 }
 
-func (m MongoDB) GetFromDB() error {
+func (m *MongoDB) UpdateUser(user string, coins, bonus int) (referral, token, lang string, err error) {
 	panic("implement me")
 }
 
-func (m MongoDB) UpdateUser() error {
-	panic("implement me")
-}
-
-func (m MongoDB) GetUser() error {
+func (m *MongoDB) UpdateReferral(referral string, summa float64) (token, lang string, err error) {
 	panic("implement me")
 }

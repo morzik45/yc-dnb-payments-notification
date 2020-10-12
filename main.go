@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"time"
@@ -18,6 +19,16 @@ type RequestBody struct {
 
 type Response struct {
 	StatusCode int `json:"statusCode"`
+}
+
+type DB interface {
+	SaveInDB(u *Update) error
+	UpdateUser(user string, coins, bonus int) (referral, token, lang string, err error)
+	UpdateReferral(referral string, summa float64) (token, lang string, err error)
+}
+
+type Notification interface {
+	SendNotification(user, token, text string) error
 }
 
 type Update struct {
@@ -67,15 +78,86 @@ func (u *Update) Validate(notificationSecret string) bool {
 	return true
 }
 
-type DB interface {
-	SaveInDB(u *Update) error
-	GetFromDB() error
-	UpdateUser() error
-	GetUser() error
+func (u *Update) Bonus() (coins, bonus int) {
+	coinCost := 4
+	coins = int(math.Ceil(math.Ceil(u.Amount) / float64(coinCost)))
+	if u.Amount > 975 {
+		bonus = 500
+	} else if u.Amount > 490 {
+		bonus = 112
+	} else if u.Amount > 390 {
+		bonus = 80
+	} else if u.Amount > 290 {
+		bonus = 50
+	} else if u.Amount > 190 {
+		bonus = 30
+	} else if u.Amount > 90 {
+		bonus = 12
+	}
+	return
 }
 
-type Notification interface {
-	SendNotification(text, user string) error
+func (u *Update) Processes(db DB, msg Notification) error {
+
+	// Сохраняем факт поступления платежа в базу
+	if err := db.SaveInDB(u); err != nil {
+		fmt.Errorf("ошибка при сохранении платежа в базу: %s", err)
+	}
+
+	// Обновляем баланс пользователя
+	coins, bonus := u.Bonus()
+	referral, uToken, uLang, err := db.UpdateUser(u.Label, coins, bonus)
+	if err != nil {
+		return err
+	}
+
+	// Уведомляем пользователя
+	var uText string
+	if uLang == "ru" {
+		uText = fmt.Sprintf("Поступил платёж на сумму: <b>%.2f₽</b>\nНа твой счёт зачислено <b>%d</b> монет (из них <b>%d</b> это бонус).\n"+
+			"Проверить баланс ты можешь командой /info. Спасибо что помогаете развитию бота.", u.Amount, coins+bonus, bonus)
+	} else {
+		uText = fmt.Sprintf("Received a payment in the amount of <b>%.2f₽</b>\n<b>%d</b> coins were credited to your account"+
+			" (<b>%d</b> of them are a bonus).\nYou can check the balance with the /info command. Thank you for helping"+
+			" the bot develop.", u.Amount, coins+bonus, bonus)
+	}
+	if err := msg.SendNotification(u.Label, uToken, uText); err != nil {
+		fmt.Errorf("ошибка при уведомлении пользователя: %s", err)
+	}
+
+	// Если есть реферрал
+	if referral != "" {
+
+		// Обновляем баланс реферрала
+		var summa float64 = math.Ceil((u.Amount*100/50)*100) / 100
+		rToken, rLang, err := db.UpdateReferral(referral, summa)
+		if err != nil {
+			fmt.Errorf("ошибка при изменении аккаунта реферрала: %s", err)
+		}
+
+		// Уведомляем реферрала
+		var rText string
+		if rLang == "ru" {
+			rText = fmt.Sprintf("+ <b>%.2f ₽</b> 💰\nПодробнее /info", summa)
+		} else {
+			rText = fmt.Sprintf("+ <b>%.2f ₽</b> 💰\nDetails /info", summa)
+		}
+		if err := msg.SendNotification(referral, rToken, rText); err != nil {
+			fmt.Errorf("ошибка при уведомлении реферрала: %s", err)
+		}
+	}
+
+	// Уведомляем о платеже админов
+	if err := msg.SendNotification(
+		os.Getenv("PAYMENTS_CHAT"),
+		"ADMIN_BOT_TOKEN",
+		fmt.Sprintf("Новый плтёж на сумму <b>%.2f</b> от пользователя <i>%s</i> (<code>%s</code>)\n"+
+			"Реферрал: <i>%s</i>", u.Amount, u.Label, u.OperationId, referral),
+	); err != nil {
+		fmt.Errorf("ошибка при уведомлении админов: %s", err)
+	}
+
+	return nil
 }
 
 func Handler(_ context.Context, request RequestBody) (*Response, error) {
@@ -85,8 +167,11 @@ func Handler(_ context.Context, request RequestBody) (*Response, error) {
 		log.Println(err)
 	}
 	if update.Validate(os.Getenv("YM_SECRET")) {
-	//	You custom logic
+		//	custom logic
+		mdb := NewMongoDB()
+		if err = update.Processes(&mdb, Telegram{}); err != nil {
 
+		}
 
 	}
 	return &Response{StatusCode: http.StatusOK}, nil

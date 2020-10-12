@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-
-
 func TestUpdate_Validate(t *testing.T) {
 	// Correct data
 	body1 := string("{\"operation_id\": \"1234567\", \"notification_type\": \"p2p-incoming\",	\"datetime\":" +
@@ -65,7 +63,6 @@ func TestUpdate_Validate(t *testing.T) {
 		log.Println(err)
 	}
 
-
 	tests := []struct {
 		name   string
 		fields fields
@@ -73,32 +70,28 @@ func TestUpdate_Validate(t *testing.T) {
 		want   bool
 	}{
 		{
-			name: "Valid",
+			name:   "Valid",
 			fields: *update,
-			args: args{notificationSecret: "01234567890ABCDEF01234567890"},
-			want: true,
-			
+			args:   args{notificationSecret: "01234567890ABCDEF01234567890"},
+			want:   true,
 		},
 		{
-			name: "inValidSecret",
+			name:   "inValidSecret",
 			fields: *update,
-			args: args{notificationSecret: "01234567890ABCDE301234567890"},
-			want: false,
-
+			args:   args{notificationSecret: "01234567890ABCDE301234567890"},
+			want:   false,
 		},
 		{
-			name: "inValidCodePro",
+			name:   "inValidCodePro",
 			fields: *invalidCodeProUpdate,
-			args: args{notificationSecret: "01234567890ABCDEF01234567890"},
-			want: false,
-
+			args:   args{notificationSecret: "01234567890ABCDEF01234567890"},
+			want:   false,
 		},
 		{
-			name: "invalidSha1Hahs",
+			name:   "invalidSha1Hahs",
 			fields: *invalidSha1HahsUpdate,
-			args: args{notificationSecret: "01234567890ABCDEF01234567890"},
-			want: false,
-
+			args:   args{notificationSecret: "01234567890ABCDEF01234567890"},
+			want:   false,
 		},
 
 		// TODO: Add test cases.
@@ -132,6 +125,117 @@ func TestUpdate_Validate(t *testing.T) {
 			}
 			if got := u.Validate(tt.args.notificationSecret); got != tt.want {
 				t.Errorf("Validate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUpdate_Bonus(t *testing.T) {
+	type fields struct {
+		OperationId      string
+		NotificationType string
+		Datetime         time.Time
+		Sha1Hash         string
+		Sender           string
+		Currency         string
+		Amount           float64
+		WithdrawAmount   float64
+		Label            string
+		LastName         string
+		FirstName        string
+		FathersName      string
+		Zip              string
+		City             string
+		Street           string
+		Building         string
+		Suite            string
+		Flat             string
+		Phone            string
+		Email            string
+		TestNotification bool
+		CodePro          bool
+		Unaccepted       bool
+	}
+	tests := []struct {
+		name      string
+		fields    fields
+		wantCoins int
+		wantBonus int
+	}{
+		{
+			name: "0",
+			fields: fields{
+				Amount: 0,
+			},
+			wantCoins: 0,
+			wantBonus: 0,
+		},
+		{
+			name: "1",
+			fields: fields{
+				Amount: 50,
+			},
+			wantCoins: 13,
+			wantBonus: 0,
+		},
+		{
+			name: "2",
+			fields: fields{
+				Amount: 89.9,
+			},
+			wantCoins: 23,
+			wantBonus: 0,
+		},
+		{
+			name: "3",
+			fields: fields{
+				Amount: 90.1,
+			},
+			wantCoins: 23,
+			wantBonus: 12,
+		},
+		{
+			name: "4",
+			fields: fields{
+				Amount: 402.33,
+			},
+			wantCoins: 101,
+			wantBonus: 80,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := &Update{
+				OperationId:      tt.fields.OperationId,
+				NotificationType: tt.fields.NotificationType,
+				Datetime:         tt.fields.Datetime,
+				Sha1Hash:         tt.fields.Sha1Hash,
+				Sender:           tt.fields.Sender,
+				Currency:         tt.fields.Currency,
+				Amount:           tt.fields.Amount,
+				WithdrawAmount:   tt.fields.WithdrawAmount,
+				Label:            tt.fields.Label,
+				LastName:         tt.fields.LastName,
+				FirstName:        tt.fields.FirstName,
+				FathersName:      tt.fields.FathersName,
+				Zip:              tt.fields.Zip,
+				City:             tt.fields.City,
+				Street:           tt.fields.Street,
+				Building:         tt.fields.Building,
+				Suite:            tt.fields.Suite,
+				Flat:             tt.fields.Flat,
+				Phone:            tt.fields.Phone,
+				Email:            tt.fields.Email,
+				TestNotification: tt.fields.TestNotification,
+				CodePro:          tt.fields.CodePro,
+				Unaccepted:       tt.fields.Unaccepted,
+			}
+			gotCoins, gotBonus := u.Bonus()
+			if gotCoins != tt.wantCoins {
+				t.Errorf("Bonus() gotCoins = %v, want %v", gotCoins, tt.wantCoins)
+			}
+			if gotBonus != tt.wantBonus {
+				t.Errorf("Bonus() gotBonus = %v, want %v", gotBonus, tt.wantBonus)
 			}
 		})
 	}
