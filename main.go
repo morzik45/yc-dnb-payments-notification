@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -23,7 +22,7 @@ type Response struct {
 
 type DB interface {
 	SaveInDB(u *Update) error
-	UpdateUser(user string, coins, bonus int) (referral, token, lang string, err error)
+	UpdateUser(user string, coins int, spent float64) (referral, token, lang string, err error)
 	UpdateReferral(referral string, summa float64) (token, lang string, err error)
 }
 
@@ -101,12 +100,12 @@ func (u *Update) Processes(db DB, msg Notification) error {
 
 	// Сохраняем факт поступления платежа в базу
 	if err := db.SaveInDB(u); err != nil {
-		fmt.Errorf("ошибка при сохранении платежа в базу: %s", err)
+		SaveError("errors", fmt.Sprintf("func: db.SaveInDB\nerror: %s\nUpdate: %v", err, &u))
 	}
 
 	// Обновляем баланс пользователя
 	coins, bonus := u.Bonus()
-	referral, uToken, uLang, err := db.UpdateUser(u.Label, coins, bonus)
+	referral, uToken, uLang, err := db.UpdateUser(u.Label, coins+bonus, u.Amount)
 	if err != nil {
 		return err
 	}
@@ -122,17 +121,17 @@ func (u *Update) Processes(db DB, msg Notification) error {
 			" the bot develop.", u.Amount, coins+bonus, bonus)
 	}
 	if err := msg.SendNotification(u.Label, uToken, uText); err != nil {
-		fmt.Errorf("ошибка при уведомлении пользователя: %s", err)
+		SaveError("errors", fmt.Sprintf("func: msg.SendNotification\nerror: %s\nUpdate: %v", err, &u))
 	}
 
 	// Если есть реферрал
 	if referral != "" {
 
 		// Обновляем баланс реферрала
-		var summa float64 = math.Ceil((u.Amount*100/50)*100) / 100
+		summa := math.Ceil((u.Amount*100/50)*100) / 100
 		rToken, rLang, err := db.UpdateReferral(referral, summa)
 		if err != nil {
-			fmt.Errorf("ошибка при изменении аккаунта реферрала: %s", err)
+			SaveError("errors", fmt.Sprintf("func: db.UpdateReferral\nerror: %s\nUpdate: %v", err, &u))
 		}
 
 		// Уведомляем реферрала
@@ -143,7 +142,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 			rText = fmt.Sprintf("+ <b>%.2f ₽</b> 💰\nDetails /info", summa)
 		}
 		if err := msg.SendNotification(referral, rToken, rText); err != nil {
-			fmt.Errorf("ошибка при уведомлении реферрала: %s", err)
+			SaveError("errors", fmt.Sprintf("func: msg.SendNotification2\nerror: %s\nUpdate: %v", err, &u))
 		}
 	}
 
@@ -154,7 +153,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 		fmt.Sprintf("Новый плтёж на сумму <b>%.2f</b> от пользователя <i>%s</i> (<code>%s</code>)\n"+
 			"Реферрал: <i>%s</i>", u.Amount, u.Label, u.OperationId, referral),
 	); err != nil {
-		fmt.Errorf("ошибка при уведомлении админов: %s", err)
+		SaveError("errors", fmt.Sprintf("func: msg.SendNotification3\nerror: %s\nUpdate: %v", err, &u))
 	}
 
 	return nil
@@ -164,15 +163,15 @@ func Handler(_ context.Context, request RequestBody) (*Response, error) {
 	update := new(Update)
 	err := json.Unmarshal([]byte(request.Body), &update)
 	if err != nil {
-		log.Println(err)
-	}
-	if update.Validate(os.Getenv("YM_SECRET")) {
+		SaveError("errors", fmt.Sprintf("func: Handler_json.Unmarshal\nerror: %s\nUpdate: %s", err, request.Body))
+	} else if update.Validate(os.Getenv("YM_SECRET")) {
 		//	custom logic
-		mdb := NewMongoDB()
-		if err = update.Processes(&mdb, Telegram{}); err != nil {
-
+		mdb, err := NewMongoDB()
+		if err != nil {
+			SaveError("errors", fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, request.Body))
+		} else if err = update.Processes(&mdb, Telegram{}); err != nil {
+			SaveError("errors", fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, request.Body))
 		}
-
 	}
 	return &Response{StatusCode: http.StatusOK}, nil
 }
