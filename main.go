@@ -158,7 +158,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 	// Уведомляем о платеже админов
 	if err := msg.SendNotification(
 		os.Getenv("PAYMENTS_CHAT"),
-		"ADMIN_BOT_TOKEN",
+		os.Getenv("ADMIN_BOT_TOKEN"),
 		fmt.Sprintf("Новый плтёж на сумму <b>%.2f</b> от пользователя <i>%s</i> (<code>%s</code>)\n"+
 			"Реферрал: <i>%s</i>", u.Amount, u.Label, u.OperationId, referral),
 	); err != nil {
