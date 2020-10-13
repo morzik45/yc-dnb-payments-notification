@@ -25,6 +25,7 @@ func SaveError(level, myErr string) {
 		Endpoint: aws.String("https://storage.yandexcloud.net"),
 	},
 	)
+
 	uploader := s3manager.NewUploader(sess)
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(bucket),
