@@ -232,15 +232,20 @@ func NewUpdate(body RequestBody) (*Update, error) {
 func Handler(_ context.Context, request RequestBody) (*Response, error) {
 	update, err := NewUpdate(request)
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("func: NewUpdate\nerror: %s\nUpdate: %s", err, request))
-	} else if update.Validate(os.Getenv("YM_SECRET")) {
+		SaveError("errors", fmt.Sprintf("func: NewUpdate\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
+		return &Response{StatusCode: http.StatusOK}, nil
+	}
+	if update.Validate(os.Getenv("YM_SECRET")) {
 		//	custom logic
 		mdb, err := NewMongoDB()
 		if err != nil {
-			SaveError("errors", fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, request))
+			SaveError("errors", fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
 		} else if err = update.Processes(&mdb, Telegram{}); err != nil {
-			SaveError("errors", fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, request))
+			SaveError("errors", fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
 		}
+	} else {
+		SaveError("errors", fmt.Sprintf("func: Validate\nbody: %s\nUpdate: %v", toJSON(request.Body), update))
 	}
+
 	return &Response{StatusCode: http.StatusOK}, nil
 }
