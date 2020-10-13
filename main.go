@@ -215,15 +215,15 @@ func NewUpdate(body RequestBody) (*Update, error) {
 	update.Phone = a.Get("phone")
 	update.Email = a.Get("email")
 	update.TestNotification, err = strconv.ParseBool(a.Get("test_notification"))
-	if err != nil {
+	if err != nil && a.Get("withdraw_amount") != "" {
 		return update, err
 	}
 	update.CodePro, err = strconv.ParseBool(a.Get("codepro"))
-	if err != nil {
+	if err != nil && a.Get("withdraw_amount") != "" {
 		return update, err
 	}
 	update.Unaccepted, err = strconv.ParseBool(a.Get("unaccepted"))
-	if err != nil {
+	if err != nil && a.Get("withdraw_amount") != "" {
 		return update, err
 	}
 	return update, nil
