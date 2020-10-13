@@ -66,17 +66,15 @@ func (u *Update) Validate(notificationSecret string) bool {
 		u.OperationId,
 		u.Amount,
 		u.Currency,
-		u.Datetime.Format("2006-01-02T03:04:05.000-07:00"),
+		u.Datetime.Format("2006-01-02T03:04:05Z"),
 		u.Sender,
 		u.CodePro,
 		notificationSecret,
 		u.Label,
 	)
-	fmt.Println(s)
 	h := sha1.New()
 	h.Write([]byte(s))
 	mySha1Hash := hex.EncodeToString(h.Sum(nil))
-	fmt.Println(mySha1Hash, u.Sha1Hash)
 	if mySha1Hash != u.Sha1Hash || u.CodePro || u.Unaccepted {
 		return false
 	}
