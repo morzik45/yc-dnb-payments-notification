@@ -1,18 +1,17 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -164,36 +163,83 @@ func (u *Update) Processes(db DB, msg Notification) error {
 	return nil
 }
 
-func toJSON(m interface{}) string {
-	js, err := json.Marshal(m)
+func toJSON(m string) string {
+	bytesBody, err := base64.StdEncoding.DecodeString(m) // Converting data
 	if err != nil {
-		log.Fatal(err)
+		fmt.Errorf("%s", err)
 	}
-	s := strings.ReplaceAll(string(js), ",", ", ")
-	return strings.ReplaceAll(s, "%3A", ":")
+	js, err := json.Marshal(bytesBody)
+	if err != nil {
+		fmt.Errorf("%s", err)
+	}
+	return strings.ReplaceAll(string(js), ",", ", ")
 }
 
-func Handler(_ context.Context, request RequestBody) (*Response, error) {
-	bytesBody, err := base64.StdEncoding.DecodeString(request.Body) // Converting data
+func NewUpdate(body RequestBody) (*Update, error) {
+	update := new(Update)
+	bytesBody, err := base64.StdEncoding.DecodeString(body.Body) // Converting data
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("Failed to Decode secret\nfunc: base64.StdEncoding.DecodeString\nerror: %s\nUpdate: %s", err, request.Body))
+		return update, err
 	}
 	a, err := url.ParseQuery(string(bytesBody))
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("func: url.ParseQuery\nerror: %s\nUpdate: %s", err, request.Body))
+		return update, err
 	}
-	decoder := json.NewDecoder(bytes.NewReader([]byte(toJSON(a))))
-	update := new(Update)
-	err = decoder.Decode(&update)
+	update.OperationId = a.Get("operation_id")
+	update.NotificationType = a.Get("notification_type")
+	update.Datetime, err = time.Parse(time.RFC3339, a.Get("datetime"))
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("func: Handler_json.Unmarshal\nerror: %s\nUpdate: %s", err, string(bytesBody)))
+		return update, err
+	}
+	update.Sha1Hash = a.Get("sha1_hash")
+	update.Sender = a.Get("sender")
+	update.Currency = a.Get("currency")
+	update.Amount, err = strconv.ParseFloat(a.Get("amount"), 64)
+	if err != nil {
+		return update, err
+	}
+	update.WithdrawAmount, err = strconv.ParseFloat(a.Get("withdraw_amount"), 64)
+	if err != nil && a.Get("withdraw_amount") != "" {
+		return update, err
+	}
+	update.Label = a.Get("label")
+	update.LastName = a.Get("lastname")
+	update.FirstName = a.Get("firstname")
+	update.FathersName = a.Get("fathersname")
+	update.Zip = a.Get("zip")
+	update.City = a.Get("city")
+	update.Street = a.Get("street")
+	update.Building = a.Get("building")
+	update.Suite = a.Get("suite")
+	update.Flat = a.Get("flat")
+	update.Phone = a.Get("phone")
+	update.Email = a.Get("email")
+	update.TestNotification, err = strconv.ParseBool(a.Get("test_notification"))
+	if err != nil {
+		return update, err
+	}
+	update.CodePro, err = strconv.ParseBool(a.Get("codepro"))
+	if err != nil {
+		return update, err
+	}
+	update.Unaccepted, err = strconv.ParseBool(a.Get("unaccepted"))
+	if err != nil {
+		return update, err
+	}
+	return update, nil
+}
+
+func Handler(_ context.Context, request RequestBody) (*Response, error) {
+	update, err := NewUpdate(request)
+	if err != nil {
+		SaveError("errors", fmt.Sprintf("func: NewUpdate\nerror: %s\nUpdate: %s", err, request))
 	} else if update.Validate(os.Getenv("YM_SECRET")) {
 		//	custom logic
 		mdb, err := NewMongoDB()
 		if err != nil {
-			SaveError("errors", fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, string(bytesBody)))
+			SaveError("errors", fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, request))
 		} else if err = update.Processes(&mdb, Telegram{}); err != nil {
-			SaveError("errors", fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, string(bytesBody)))
+			SaveError("errors", fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, request))
 		}
 	}
 	return &Response{StatusCode: http.StatusOK}, nil
