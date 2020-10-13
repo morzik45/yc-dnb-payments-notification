@@ -28,7 +28,7 @@ func SaveError(level, myErr string) {
 	uploader := s3manager.NewUploader(sess)
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(bucket),
-		Key:    aws.String(fmt.Sprintf("logs/payments/%s/%s", level, filename)),
+		Key:    aws.String(fmt.Sprintf("logs/payments/%s", filename)),
 		Body:   bytes.NewReader([]byte(myErr)),
 	})
 	if err != nil {
