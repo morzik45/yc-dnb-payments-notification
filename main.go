@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -161,9 +162,13 @@ func (u *Update) Processes(db DB, msg Notification) error {
 }
 
 func Handler(_ context.Context, request RequestBody) (*Response, error) {
-	decoder := json.NewDecoder(bytes.NewReader([]byte(request.Body)))
+	bytesBody, err := base64.StdEncoding.DecodeString(request.Body) // Converting data
+	if err != nil {
+		fmt.Println("Failed to Decode secret", err)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(bytesBody))
 	update := new(Update)
-	err := decoder.Decode(&update)
+	err = decoder.Decode(&update)
 	if err != nil {
 		SaveError("errors", fmt.Sprintf("func: Handler_json.Unmarshal\nerror: %s\nUpdate: %s", err, request.Body))
 	} else if update.Validate(os.Getenv("YM_SECRET")) {
