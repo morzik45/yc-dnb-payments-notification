@@ -159,7 +159,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 	if err := msg.SendNotification(
 		os.Getenv("PAYMENTS_CHAT"),
 		os.Getenv("ADMIN_BOT_TOKEN"),
-		fmt.Sprintf("Новый платёж на сумму <b>%.2f</b> от пользователя <i>%s</i> (<code>%s</code>)\n"+
+		fmt.Sprintf("Новый платёж на сумму <b>%.2f</b>₽ от пользователя <i>%s</i> (<code>%s</code>)\n"+
 			"Реферрал: <i>%s</i>", u.Amount, u.Label, u.OperationId, referral),
 	); err != nil {
 		SaveError("errors", fmt.Sprintf("func: msg.SendNotification3\nerror: %s\nUpdate: %v", err, &u))
