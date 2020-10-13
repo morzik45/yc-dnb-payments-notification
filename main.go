@@ -72,9 +72,11 @@ func (u *Update) Validate(notificationSecret string) bool {
 		notificationSecret,
 		u.Label,
 	)
+	fmt.Println(s)
 	h := sha1.New()
 	h.Write([]byte(s))
 	mySha1Hash := hex.EncodeToString(h.Sum(nil))
+	fmt.Println(mySha1Hash, u.Sha1Hash)
 	if mySha1Hash != u.Sha1Hash || u.CodePro || u.Unaccepted {
 		return false
 	}
