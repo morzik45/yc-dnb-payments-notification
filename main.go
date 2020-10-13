@@ -102,6 +102,11 @@ func (u *Update) Bonus() (coins, bonus int) {
 
 func (u *Update) Processes(db DB, msg Notification) error {
 
+	if u.TestNotification {
+		// Если это тестовый платёж, он приходит с пустым Label, заворачиваем его на админа
+		u.Label = os.Getenv("ADMIN_ID")
+	}
+
 	// Сохраняем факт поступления платежа в базу
 	if err := db.SaveInDB(u); err != nil {
 		SaveError("errors", fmt.Sprintf("func: db.SaveInDB\nerror: %s\nUpdate: %v", err, &u))

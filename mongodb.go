@@ -84,7 +84,7 @@ func (m *MongoDB) SaveInDB(u *Update) error {
 	}
 	payment.UtcDatetime = time.Now()
 	payment.PayDone = true
-	_, err = m.Payments.InsertOne(ctx, PaymentInDB{})
+	_, err = m.Payments.InsertOne(ctx, payment)
 	return err
 }
 

@@ -16,7 +16,7 @@ jobs:
           function_id: ${{ secrets.FUNCTION_ID }}
           runtime: 'golang114'
           entrypoint: 'main.Handler'
-          environment: DEBUG=false,PAYMENTS_CHAT=${{ secrets.PAYMENTS_CHAT }},OLD_BOT_TOKEN=${{ secrets.OLD_BOT_TOKEN }},ADMIN_BOT_TOKEN=${{ secrets.ADMIN_BOT_TOKEN }},YM_SECRET=${{ secrets.YM_SECRET }},MONGO_URI=${{ secrets.MONGO_URI }},DB_NAME=${{ secrets.DB_NAME }},AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }},AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          environment: DEBUG=false,PAYMENTS_CHAT=${{ secrets.PAYMENTS_CHAT }},OLD_BOT_TOKEN=${{ secrets.OLD_BOT_TOKEN }},ADMIN_BOT_TOKEN=${{ secrets.ADMIN_BOT_TOKEN }},YM_SECRET=${{ secrets.YM_SECRET }},MONGO_URI=${{ secrets.MONGO_URI }},DB_NAME=${{ secrets.DB_NAME }},AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }},AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }},ADMIN_ID=${{ secrets.ADMIN_ID }}
           memory: '128'
           execution_timeout: '7'
           service_account: ${{ secrets.SERVICE_ACCOUNT }}
