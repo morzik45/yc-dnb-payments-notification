@@ -8,9 +8,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -161,23 +164,35 @@ func (u *Update) Processes(db DB, msg Notification) error {
 	return nil
 }
 
+func toJSON(m interface{}) string {
+	js, err := json.Marshal(m)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return strings.ReplaceAll(string(js), ",", ", ")
+}
+
 func Handler(_ context.Context, request RequestBody) (*Response, error) {
 	bytesBody, err := base64.StdEncoding.DecodeString(request.Body) // Converting data
 	if err != nil {
-		fmt.Println("Failed to Decode secret", err)
+		SaveError("errors", fmt.Sprintf("Failed to Decode secret\nfunc: base64.StdEncoding.DecodeString\nerror: %s\nUpdate: %s", err, request.Body))
 	}
-	decoder := json.NewDecoder(bytes.NewReader(bytesBody))
+	a, err := url.ParseQuery(string(bytesBody))
+	if err != nil {
+		SaveError("errors", fmt.Sprintf("func: url.ParseQuery\nerror: %s\nUpdate: %s", err, request.Body))
+	}
+	decoder := json.NewDecoder(bytes.NewReader([]byte(toJSON(a))))
 	update := new(Update)
 	err = decoder.Decode(&update)
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("func: Handler_json.Unmarshal\nerror: %s\nUpdate: %s", err, request.Body))
+		SaveError("errors", fmt.Sprintf("func: Handler_json.Unmarshal\nerror: %s\nUpdate: %s", err, string(bytesBody)))
 	} else if update.Validate(os.Getenv("YM_SECRET")) {
 		//	custom logic
 		mdb, err := NewMongoDB()
 		if err != nil {
-			SaveError("errors", fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, request.Body))
+			SaveError("errors", fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, string(bytesBody)))
 		} else if err = update.Processes(&mdb, Telegram{}); err != nil {
-			SaveError("errors", fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, request.Body))
+			SaveError("errors", fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, string(bytesBody)))
 		}
 	}
 	return &Response{StatusCode: http.StatusOK}, nil
