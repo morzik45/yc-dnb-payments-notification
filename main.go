@@ -169,7 +169,8 @@ func toJSON(m interface{}) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return strings.ReplaceAll(string(js), ",", ", ")
+	s := strings.ReplaceAll(string(js), ",", ", ")
+	return strings.ReplaceAll(s, "%3A", ":")
 }
 
 func Handler(_ context.Context, request RequestBody) (*Response, error) {
