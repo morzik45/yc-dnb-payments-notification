@@ -6,13 +6,19 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"math/rand"
 	"os"
 	"time"
 )
 
+func GetRandInt() int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Int()
+}
+
 func SaveError(level, myErr string) {
 	bucket := os.Getenv("DB_NAME")
-	filename := time.Now().Format(time.RFC3339) + ".txt"
+	filename := fmt.Sprintf("%s%d%s", time.Now().Format(time.RFC3339), GetRandInt(), ".txt")
 
 	sess, err := session.NewSession(&aws.Config{
 		Region:   aws.String("ru-central1"),

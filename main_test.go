@@ -93,8 +93,6 @@ func TestUpdate_Validate(t *testing.T) {
 			args:   args{notificationSecret: "01234567890ABCDEF01234567890"},
 			want:   false,
 		},
-
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
