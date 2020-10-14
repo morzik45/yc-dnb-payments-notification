@@ -90,6 +90,17 @@ func (m *MongoDB) SaveInDB(u *Update) error {
 
 func (m *MongoDB) UpdateUser(user string, coins int, spent float64) (referral, token, lang string, err error) {
 	var TgUser *TgUser
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{
+		primitive.E{
+			Key:   "token",
+			Value: 1,
+		}, primitive.E{
+			Key:   "user.lang",
+			Value: 1,
+		}, primitive.E{
+			Key:   "user.referral",
+			Value: 1,
+		}})
 	filter := bson.D{primitive.E{Key: "_id", Value: user}}
 	update := bson.D{
 		primitive.E{
@@ -110,7 +121,7 @@ func (m *MongoDB) UpdateUser(user string, coins int, spent float64) (referral, t
 			},
 		},
 	}
-	if err := m.Users.FindOneAndUpdate(ctx, filter, update).Decode(&TgUser); err != nil {
+	if err := m.Users.FindOneAndUpdate(ctx, filter, update, opts).Decode(&TgUser); err != nil {
 		//if err == mongo.ErrNoDocuments {
 		return "", "", "", err
 	}
@@ -134,7 +145,15 @@ func (m *MongoDB) UpdateReferral(referral string, summa float64) (token, lang st
 			},
 		},
 	}
-	if err := m.Users.FindOneAndUpdate(ctx, filter, update).Decode(&TgUser); err != nil {
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{
+		primitive.E{
+			Key:   "token",
+			Value: 1,
+		}, primitive.E{
+			Key:   "user.lang",
+			Value: 1,
+		}})
+	if err := m.Users.FindOneAndUpdate(ctx, filter, update, opts).Decode(&TgUser); err != nil {
 		//if err == mongo.ErrNoDocuments {
 		return "", "", err
 	}

@@ -24,24 +24,29 @@ func (t Telegram) SendNotification(user, token, text string) error {
 		"parse_mode": "HTML",
 	})
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("ошибка при кодировании json при отправке уведомления: %s", err))
+		SaveError(fmt.Sprintf("ошибка при кодировании json при отправке уведомления: %s", err))
 		return err
 	}
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("ошибка при отправке запроса в TG: %s", err))
+		SaveError(fmt.Sprintf("ошибка при отправке запроса в TG: %s", err))
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			SaveError(fmt.Sprintf("ошибка при закрытии тела ответа от тг: %s", err))
+		}
+	}()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("ошибка при расшифровке ответа от TG: %s", err))
+		SaveError(fmt.Sprintf("ошибка при расшифровке ответа от TG: %s", err))
 		return err
 	}
 	tr := new(TGResponse)
 	err = json.Unmarshal(body, &tr)
 	if !tr.Ok {
-		SaveError("errors", fmt.Sprintf("TG вернул ошибку: %s", string(body)))
+		SaveError(fmt.Sprintf("TG вернул ошибку: %s", string(body)))
 		return errors.New(string(body))
 	}
 	return nil

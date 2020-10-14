@@ -16,7 +16,7 @@ func GetRandInt() int {
 	return rand.Int()
 }
 
-func SaveError(level, myErr string) {
+func SaveError(myErr string) {
 	bucket := os.Getenv("DB_NAME")
 	filename := fmt.Sprintf("%s%d%s", time.Now().Format(time.RFC3339), GetRandInt(), ".txt")
 
@@ -33,7 +33,8 @@ func SaveError(level, myErr string) {
 		Body:   bytes.NewReader([]byte(myErr)),
 	})
 	if err != nil {
-		fmt.Errorf("unable to upload %q to %q, %v", filename, bucket, err)
+		err := fmt.Errorf("unable to upload %q to %q, %v", filename, bucket, err)
+		fmt.Println(err.Error())
 	}
 	fmt.Printf("Successfully uploaded %q to %q\n", filename, bucket)
 }

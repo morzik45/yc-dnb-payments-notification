@@ -5,14 +5,12 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -109,7 +107,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 
 	// Сохраняем факт поступления платежа в базу
 	if err := db.SaveInDB(u); err != nil {
-		SaveError("errors", fmt.Sprintf("func: db.SaveInDB\nerror: %s\nUpdate: %v", err, &u))
+		SaveError(fmt.Sprintf("func: db.SaveInDB\nerror: %s\nUpdate: %v", err, &u))
 	}
 
 	// Обновляем баланс пользователя
@@ -130,7 +128,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 			" the bot develop.", u.Amount, coins+bonus, bonus)
 	}
 	if err := msg.SendNotification(u.Label, uToken, uText); err != nil {
-		SaveError("errors", fmt.Sprintf("func: msg.SendNotification\nerror: %s\nUpdate: %v", err, &u))
+		SaveError(fmt.Sprintf("func: msg.SendNotification\nerror: %s\nUpdate: %v", err, &u))
 	}
 
 	// Если есть реферрал
@@ -140,7 +138,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 		summa := math.Ceil((u.Amount*50/100)*100) / 100
 		rToken, rLang, err := db.UpdateReferral(referral, summa)
 		if err != nil {
-			SaveError("errors", fmt.Sprintf("func: db.UpdateReferral\nerror: %s\nUpdate: %v", err, &u))
+			SaveError(fmt.Sprintf("func: db.UpdateReferral\nerror: %s\nUpdate: %v", err, &u))
 		}
 
 		// Уведомляем реферрала
@@ -151,7 +149,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 			rText = fmt.Sprintf("+ <b>%.2f ₽</b> 💰\nDetails /info", summa)
 		}
 		if err := msg.SendNotification(referral, rToken, rText); err != nil {
-			SaveError("errors", fmt.Sprintf("func: msg.SendNotification2\nerror: %s\nUpdate: %v", err, &u))
+			SaveError(fmt.Sprintf("func: msg.SendNotification2\nerror: %s\nUpdate: %v", err, &u))
 		}
 	}
 
@@ -162,7 +160,7 @@ func (u *Update) Processes(db DB, msg Notification) error {
 		fmt.Sprintf("Новый платёж на сумму <b>%.2f</b>₽ от пользователя <i>%s</i> (<code>%s</code>)\n"+
 			"Реферрал: <i>%s</i>", u.Amount, u.Label, u.OperationId, referral),
 	); err != nil {
-		SaveError("errors", fmt.Sprintf("func: msg.SendNotification3\nerror: %s\nUpdate: %v", err, &u))
+		SaveError(fmt.Sprintf("func: msg.SendNotification3\nerror: %s\nUpdate: %v", err, &u))
 	}
 
 	return nil
@@ -171,13 +169,10 @@ func (u *Update) Processes(db DB, msg Notification) error {
 func toJSON(m string) string {
 	bytesBody, err := base64.StdEncoding.DecodeString(m) // Converting data
 	if err != nil {
-		fmt.Errorf("%s", err)
+		fmt.Printf("%s", err)
 	}
-	js, err := json.Marshal(bytesBody)
-	if err != nil {
-		fmt.Errorf("%s", err)
-	}
-	return strings.ReplaceAll(string(js), ",", ", ")
+
+	return string(bytesBody)
 }
 
 func NewUpdate(body RequestBody) (*Update, error) {
@@ -237,19 +232,19 @@ func NewUpdate(body RequestBody) (*Update, error) {
 func Handler(_ context.Context, request RequestBody) (*Response, error) {
 	update, err := NewUpdate(request)
 	if err != nil {
-		SaveError("errors", fmt.Sprintf("func: NewUpdate\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
+		SaveError(fmt.Sprintf("func: NewUpdate\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
 		return &Response{StatusCode: http.StatusOK}, nil
 	}
 	if update.Validate(os.Getenv("YM_SECRET")) {
 		//	custom logic
 		mdb, err := NewMongoDB()
 		if err != nil {
-			SaveError("errors", fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
+			SaveError(fmt.Sprintf("func: NewMongoDB\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
 		} else if err = update.Processes(&mdb, Telegram{}); err != nil {
-			SaveError("errors", fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
+			SaveError(fmt.Sprintf("func: update.Processes\nerror: %s\nUpdate: %s", err, toJSON(request.Body)))
 		}
 	} else {
-		SaveError("errors", fmt.Sprintf("func: Validate\nbody: %s\nUpdate: %v", toJSON(request.Body), update))
+		SaveError(fmt.Sprintf("func: Validate\nbody: %s\nUpdate: %v", toJSON(request.Body), update))
 	}
 
 	return &Response{StatusCode: http.StatusOK}, nil
